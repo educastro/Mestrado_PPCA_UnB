@@ -7,12 +7,12 @@
 # Calcule e imprima a média m (com 3 casas decimais) usando a fórmula:
 # m=(1x1 + 2x2 + 3x3 + 4x4 + 5x5)/15
 
-numero1 = float(input())
-numero2 = float(input())
-numero3 = float(input())
-numero4 = float(input())
-numero5 = float(input())
+number1 = float(input())
+number2 = float(input())
+number3 = float(input())
+number4 = float(input())
+number5 = float(input())
 
-resultado = (1*numero1 + 2*numero2 + 3*numero3 + 4*numero4 + 5*numero5)/15
+result = (1*number1 + 2*number2 + 3*number3 + 4*number4 + 5*number5)/15
 
-print("%.3f" % resultado)
+print("%.3f" % result)

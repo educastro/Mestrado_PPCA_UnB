@@ -30,7 +30,7 @@
 
 x1, y1 = input().split()
 x2, y2 = input().split()
-imaginario = input().split("+")
+imaginary_number = input().split("+")
 
 x1 = float(x1)
 x2 = float(x2)
@@ -38,15 +38,15 @@ x2 = float(x2)
 y1 = float(y1)
 y2 = float(y2)
 
-distancia = (((x2-x1)**2) + ((y2-y1)**2))**0.5
+distance = (((x2-x1)**2) + ((y2-y1)**2))**0.5
 
-if len(imaginario) == 1:
-    imaginario1 = float(imaginario[0].replace("j", ""))
+if len(imaginary_number) == 1:
+    imaginario1 = float(imaginary_number[0].replace("j", ""))
     z = (imaginario1**2)**0.5
 else:
-    imaginario1 = float(imaginario[0].replace("j", ""))
-    imaginario2 = float(imaginario[1].replace("j", ""))
-    z = ((imaginario1**2) + (imaginario2**2))**0.5
+    imaginary_number1 = float(imaginary_number[0].replace("j", ""))
+    imaginary_number2 = float(imaginary_number[1].replace("j", ""))
+    z = ((imaginary_number1**2) + (imaginary_number2**2))**0.5
 
-print("%.4f" % distancia)
+print("%.4f" % distance)
 print("%.4f" % z)

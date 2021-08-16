@@ -18,9 +18,9 @@
 # Input: 4.2
 # Output: 6.86
 
-numero1 = float(input())
-numero2 = float(input())
+number1 = float(input())
+number2 = float(input())
 
-media = (numero1+numero2)/2
+average = (number1+number2)/2
 
-print("%.2f" % media)
+print("%.2f" % average)

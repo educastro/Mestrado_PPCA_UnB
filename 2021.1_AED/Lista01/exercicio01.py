@@ -4,5 +4,5 @@
 # Input: Alô Mundo! Alô UnB. AlOOOOooo.......
 # Output: Alô Mundo! Alô UnB. AlOOOOooo.......
 
-mensagem = input()
-print(mensagem)
+message = input()
+print(message)
