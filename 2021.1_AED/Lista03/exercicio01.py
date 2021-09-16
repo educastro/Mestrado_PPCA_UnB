@@ -29,3 +29,44 @@
 # B D 1
 # C D 1
 # Output: A B C D
+
+from itertools import permutations
+
+entrada = int(input())
+
+arestas = int((entrada * (entrada - 1 ))/2)
+
+grafo = {}
+
+for iterador in range(arestas):
+
+    a1, a2, valor = input().split()
+
+    valor = int(valor)
+
+    grafo[(a1, a2)] = valor
+
+vertices = []
+
+for iterador2 in grafo.keys():
+    if iterador2[0] not in vertices:
+        vertices.append(iterador2[0])
+    if iterador2[1] not in vertices:
+        vertices.append(iterador2[1])
+vertices.sort()
+
+maximo = 0
+
+for recorte in permutations(vertices, entrada):
+    minimo = 0
+    for i in range(entrada):
+        if (i+1 < entrada):
+            minimo = minimo + grafo.get((recorte[i], recorte[i+1]), grafo.get((recorte[i+1], recorte[i]), 0 ))
+        else:
+            minimo = minimo + grafo.get((recorte[i], recorte[0]), grafo.get((recorte[0], recorte[i]), 0 ))
+    if minimo > maximo:
+        maximo = minimo
+        sequencia_maxima = recorte[:]
+
+for iterador3 in sequencia_maxima:
+    print(iterador3, end=" ")
