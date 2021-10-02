@@ -1,0 +1,186 @@
+---
+title: "ANOVA - Análise de Variância de ativos financeiros"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+#### Aluno: Eduardo de Oliveira Castro
+#### Matrícula: 210008164
+
+- Esse trabalho tem como objetivo avaliar a Análise de Variância (ANOVA) de um corpo de assets predeterminado para a condução desse estudo. 
+- A Tarefa dar-se-á na análise entre as médias de diferentes ativos, ou carteira versus índice de mercado, ou ativos versus carteira, etc. Cabendo ao aluno escolher a comparação das médias. 
+- É ideal que seja feita análise das questões de heterocedasticidades, faça-se as devidas correções e compare as médias por grupos e entre grupos. 
+- Para o trabalho, decidi utilizar arquivo gerado no exercício 03 contendo valores para as ações AMER3.SA,LAME4.SA,MGLU3.SA,MELI34.SA e AMZO34.SA, bem como do índice ^BVSP, entre 2015 e 09 de setembro de 2021.
+
+# Bibliotecas utilizadas neste trabalho, conforme exemplo do ANATEL dado em aula:
+```{r}
+# Bibliotecas para análises estatísticas
+suppressMessages(library(car))
+suppressMessages(library(agricolae))
+# Bibliotecas para tratamento de dados e plotagem de gráfico
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+```
+
+# Agora carregamos a base de dados utilizada para este trabalho, conforme exemplo do ANATEL dado em aula:
+
+```{r}
+suppressMessages(library(data.table))
+# Arquivo gerado no exercício 03 contendo valores para as ações AMER3.SA,LAME4.SA,MGLU3.SA,MELI34.SA e AMZO34.SA, bem como do índice ^BVSP, entre 2015 e 09 de setembro de 2021.
+dados <- read.csv("carteira.csv")
+# Usamos o método melt para adaptar a tabela para o formato, incluindoque será explorado nesse trabalho.
+dados_melted <- melt(setDT(dados),id.vars ="Date", variable.name = "acao")
+```
+
+# Funções, conforme exemplo do ANATEL dado em aula:
+```{r}
+impute_na <- function(data, columns){
+  # data: data.frame, columns: character
+  
+  demais_cols <- base::setdiff(names(data), columns)
+  data0 <- data[demais_cols]
+  data_na <- data[columns]
+  
+  replace_na <- function(x){
+    x[is.na(x)] <- as.integer(mean(x, na.rm = TRUE))
+    return(x)
+  }
+  
+  data_na <- apply(
+    X = data_na, MARGIN = 2, FUN = replace_na
+  )
+  
+  data <- cbind(data0, data_na)
+  
+  return(data)
+}
+
+wilcox_teste <- function(f., groups, values, data, verbose = FALSE){
+  # f.: formula, groups: character(1), values: character(2)
+  # results: htest
+  
+  index <- (data[[groups]] %in% values)
+  data_sub <- data[index,]
+  
+  test <- wilcox.test(f., data = data_sub, exact = FALSE)
+  
+  if (verbose) {
+    cat("=============================================\n")
+    msg <- paste0(
+      values, collapse = ' VS '
+    )
+    cat("Testando diferenças para: ", msg, '\n')
+    print(test)
+    cat("---------------------------------------------\n")
+    return(invisible(test))
+  }
+  
+  return(test)
+}
+
+plot_media_indice <- function(data, servico){
+  # data: data.frame, servico: character(1)
+  
+  title. <- paste0('Média do índice para ', servico, ' - CI 95%')
+  #par(las = 1)
+  gplots::plotmeans(
+    indice ~ operadora, xlab = "Operadora", ylab = "Índice", 
+    main = title., data = data
+  )
+}
+```
+
+# Teste de Homogeneidade da variância do Erro, conforme exemplo do ANATEL dado em aula:
+
+```{r}
+levene_res <- leveneTest(dados_melted$value, dados_melted$acao)
+
+bartlett_res <- bartlett.test(value ~ acao, data = dados_melted)
+
+print(list(levene = levene_res, bartlett = bartlett_res))
+
+pos_pre = data.frame(dados_melted)
+head(pos_pre)
+```
+
+# Teste ANOVA, conforme exemplo do ANATEL dado em aula:
+
+```{r}
+reg_mean <- lm(value ~ acao, data = dados_melted)
+anova <- Anova(reg_mean, white.adjust = TRUE)
+```
+
+# Teste Não Paramétrico de Mann-Whitney, conforme exemplo do ANATEL dado em aula:
+```{r}
+dados_melted <- dados_melted %>% 
+  mutate(acao = as.character(acao))
+
+compilado <- dados_melted %>% 
+  group_by(acao) %>% 
+  summarise(
+    Valores = n(),
+    Valor_acao = mean(value, na.rm = TRUE),
+    Variabilidade_acao = sd(value, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>% 
+  arrange(desc(Valor_acao)) %>% 
+  as.data.frame()
+print(compilado)
+```
+
+# Teste Wilcox, conforme exemplo do ANATEL dado em aula:
+
+```{r}
+acoes <- unique(dados_melted$acao)
+acoes <- combn(
+  x = acoes, m = 2, simplify = FALSE
+)
+names(acoes) <- sapply(
+  acoes, function(x){paste(x, collapse = '-')}
+)
+
+# Testando pares de operadoras
+testes_wilcox <- lapply(
+  X = acoes, FUN = wilcox_teste, f. = value ~ acao,
+  groups = 'acao', data = dados_melted
+)
+
+compilado_wilcox <- data.frame(
+  comparacao = names(testes_wilcox),
+  statistic_W = sapply(testes_wilcox, `[[`, i = 'statistic'),
+  p_valor = sapply(testes_wilcox, `[[`, i = 'p.value'),
+  row.names = NULL
+)
+print(list(compilado_wilcox))
+```
+
+
+# Valor Médio por Ativo, conforme exemplo do ANATEL dado em aula:
+
+```{r}
+# Média do índice por ativo
+medias_ativ <- dados_melted %>% 
+  group_by(acao) %>% 
+  summarise(valor_medio = mean(value), .groups = 'drop')
+medias_nulo <- medias_ativ %>% 
+  mutate(valor_medio = 0)
+medias <- rbind(medias_ativ, medias_nulo)
+
+grafico <- medias_ativ %>% 
+  ggplot(aes(x = acao, y = valor_medio)) +
+  geom_point(color = '#808000', size = 2.5) +
+  geom_line(data = medias, aes(x = acao, y =valor_medio), color = '#808000') +
+  theme_light() +
+  labs(
+    x = 'Acao', y = 'Valor',
+    title = 'Valor médio por acao'
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5)
+  )
+
+print(grafico)
+```
+

@@ -1,0 +1,16 @@
+---
+title: "ANOVA - Análise de Variância de ativos financeiros"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+#### Aluno: Eduardo de Oliveira Castro
+#### Matrícula: 210008164
+
+- Esse trabalho tem como objetivo avaliar a Análise de Variância (ANOVA) de um corpo de assets predeterminado para a condução desse estudo. 
+- A Tarefa dar-se-á na análise entre as médias de diferentes ativos, ou carteira versus índice de mercado, ou ativos versus carteira, etc. Cabendo ao aluno escolher a comparação das médias. 
+- É ideal que seja feita análise das questões de heterocedasticidades, faça-se as devidas correções e compare as médias por grupos e entre grupos. 
+- Para o trabalho, decidi utilizar uma comparação do fechamento do índice BOVESPA nos últimos XX meses.
+
