@@ -1,0 +1,83 @@
+---
+title: "ATIVIDADE ANOVA"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+#ANOVA -Aanálise de Variância 
+Professor: João Gabriel de Moraes Souza <br> 
+Aluna: Stella Mendes Meireles Bonifácio
+
+<br>
+<br>
+
+Importar as bibliotecas necessárias para a ANOVA.
+
+```{r}
+suppressMessages(library(car))
+suppressMessages(library(agricolae))
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+```
+#Leitura de dados da carteira e Ibovespa.
+Ler o arquivo contendo a taxa de retorno da carteira montada com o indicador Bovespa. 
+<br>
+A carteira de ações contém ações de empresas do setor financeiro. Foram escolhidas as empresas
+Banco do Brasil, Bradesco, Itaú, Baza e Banco ABC.
+
+```{r}
+dados = read.csv("acoes/taxas_retorno_final.csv", stringsAsFactors = TRUE)
+head(dados, n=10)
+```
+#Teste de Levene.
+
+O teste de Levene é usado para avaliar a homogeneidade de variâncias de uma variável calculada para dois ou mais grupos. Nesse caso, fararemos o teste para os grupos "CARTEIRA" e "BOVESPA".
+<br>
+Quanto maiores são os quadrados dos resíduos, maiores são as variâncias. 
+Caso o valor de F não seja significante, não será rejeita a hipótese de que as variâncias são homogêneas.
+
+
+```{r}
+X = dados
+levene_res <- leveneTest(RETORNO ~ GRUPO, dados)
+levene_res
+
+```
+Como o p-valor "Pr(>F)" é menor que 5%, temos evidências para rejeitar a hipótese nula de que existe igualdade de variâncias. Nesse caso, chegamos à conclusão de que as variáveis são heterocedásticas.
+
+#Teste de Bartlett
+
+O teste de Bartlett também é utilizado para verificar se as variâncias de  grupos são homogêneas.
+<br>
+O teste de Bartlett calcula a média aritmética ponderada e a média geométrica ponderada de cada variância da amostra com base nos graus de liberdade.
+
+
+```{r}
+bartlett_res <- bartlett.test(RETORNO ~ GRUPO, dados)
+bartlett_res
+```
+
+
+Nesse caso, o p-valor do teste de Bartlett foi menor que 0,05, assim rejeita-se a hipótese nula em favorecimento da hipótese alternativa.
+
+#Análise de Variância 
+
+As suposições da ANOVA são:
+<br>
+i) as amostras devem ser independentes entre si;
+<br>
+ii) os dados nas populações devem apresentar distribuição normal;
+<br>
+iii) as variâncias populacionais devem ser homogêneas.
+
+
+```{r}
+anova <- aov(RETORNO ~ GRUPO, data=dados)
+resumo_anova <- summary(anova);
+resumo_anova
+```
+
+```{r}
+plot(anova)
+```

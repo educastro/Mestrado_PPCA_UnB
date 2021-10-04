@@ -1,0 +1,244 @@
+---
+title: "R Notebook - ANOVA"
+author: "Adriane Medeiros Melo"
+date: "20/09/2021"
+output:
+  html_document:
+    df_print: paged
+header-includes:
+- \usepackage{bbm}
+- \usepackage{cases}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Atividade
+
+1 - Gerar uma comparação entre as médias de diferentes ativos ou carteira versus índice de mercado, ou ativos versus carteira, etc.
+
+2 - Analisar as questões de heterocedasticidades; fazer as devidas correções e comparar as médias por grupos e entre grupos. 
+
+# Anova - análise de variância
+
+Anova permite realizar inferência sobre diferentes médias do grupo de dados, comparando as diferentes estimativas de variância associadas com essa observação.
+
+Quando não há diferença entre as médias dos grupos, os diferentes métodos de se estimar a variância produzem essencialmente o mesmo valor.
+
+Quando existe diferença entre as médias dos grupos de ao menos um método, esse método produz uma estimativa
+muito maior de variância do que os outros.
+
+Para definir se esse método apresenta diferença de médias por meio da variação das variâncias, é necessário realizar um teste de hipótese estatístico para definir se essas variações são significativas do ponto de vista estatítico, o que algumas vezes não pode ser percebido por meio dos gráficos.
+
+Para testar a diferença das médias:
+
+1 - Define-se uma Hipótese Nula - HO
+
+2 - Assume-se o pressuposto de que a variabilidade das observações de cada grupo em relação à média do grupo é a mesma para todos os grupos, isto é, que há HOMOCEDASTICIDADE
+
+Isso é importante para permitir inferências sobre a população a partir de uma distribuição normal, porque se houver muita assimetria essa inferência não é possível
+
+Para tanto é necessário utilizar duas abordagens para mensurar a variância:
+
+1 - Dentro do grupo
+
+FORMULA 2:29:01
+
+Em que Yij é a observação estudada i do grupo j, Y_j.....
+
+2 - Entre os grupos
+
+FORMULA 2:30:47
+
+# Implementação
+
+Importado as bibliotecas utilizadas
+
+```{r}
+# Análise estatística
+suppressMessages(library(car))
+suppressMessages(library(agricolae))
+# Tratamento de dados
+suppressMessages(library(dplyr))
+# Geração de gráficos
+suppressMessages(library(ggplot2))
+```
+
+Criando as funções para tratamento da heterocedasticidade
+
+```{r}
+wilcox_teste <- function(f., groups, values, data, verbose = FALSE){
+  
+  index <- (data[[groups]] %in% values)
+  data_sub <- data[index,]
+  
+  test <- wilcox.test(f., data = data_sub, exact = FALSE)
+  
+  if (verbose) {
+    cat("=============================================\n")
+    msg <- paste0(
+      values, collapse = ' VS '
+    )
+    cat("Testando diferenças para: ", msg, '\n')
+    print(test)
+    cat("---------------------------------------------\n")
+    return(invisible(test))
+  }
+  
+  return(test)
+}
+
+#gráfico para mostrar o resultado do teste wilcox
+plot_media_indice <- function(data, servico){
+  # data: data.frame, servico: character(1)
+  
+  title. <- paste0('Média do índice para ', servico, ' - CI 95%')
+  #par(las = 1)
+  gplots::plotmeans(
+    indice ~ operadora, xlab = "Operadora", ylab = "Índice", 
+    main = title., data = data
+  )
+}
+```
+
+Carregando o arquivo csv com os dados dos ativos e do indicador Nasdaq - arquivo gerado no exercício do Mercado Financeiro
+
+```{r}
+suppressMessages(library(data.table))
+dados <- read.csv("indices/acoes.csv")
+dados_melt <- melt(setDT(df),id.vars ="Date", variable.name = "ativo")
+dados_melt
+```
+
+# Teste de Homogeneidade da variância do Erro
+
+Estatística de teste para identificar se as variáveis possuem distribuição homocedática, ou seja , se os erros possuem variância comum.
+
+Dois autores possuem testes distintos para testar se a variancia da distribuicao é hetero ou homocedástica
+O Levene utiliza a estatistica F e o Bartlett utiliza o K_squared e, a partir disso, encontra o p-valor associado à estatística de cada teste.
+
+O p-valor representa o erro de rejeição da hipótese nula. Quanto maior o p-valor, maior o erro. 
+
+A hipótese nula - As variâncias são homocedásticas, se os valores extremos não impactam a médias ou as inferências sobre a média.
+
+O uso de dois testes distintos é últil para que um corrobore o resultado do outro e, assim, torne o resultado mais robusto.
+
+RESULTADO
+O p-valor de 0% confirmado no resultado dos dois testes mostra que existe 0% de chance de que valores extremos não vão impactar a média ou as inferências em relação a média.
+
+Então rejeita-se a hipotése nula de que as variâncias são homocedásticas.
+
+Sendo uma variância heterocedástica é necessário aplicar um tratamento para viabilizar a análise simples da ANOVA.
+
+
+```{r}
+levene_res <- leveneTest(dados_melt$value, dados_melt$ativo)
+
+bartlett_res <- bartlett.test(value ~ ativo, data = dados_melt)
+
+print(list(levene = levene_res, bartlett = bartlett_res))
+```
+#Teste ANOVA ajustado pela matriz de White
+
+Essa matriz atribui pesos nos valores extremos, confirmados pela heterocedasticidade do resultado acima, de forma que a média seja mais equânime, menos impactada pelos valores extremos. Regressão.
+
+Cria várias subamostras para inflar as amostras, de forma que o parâmetro siga a distribução normal e permita a inferência sobre a população
+
+Matriz de white - faz algo similar ao que a variância e covariância fazem para forçar uma característica próxima à homocedástica
+
+```{r}
+reg_mean <- lm(value ~ ativo, data = dados_melt)
+anova <- Anova(reg_mean, white.adjust = TRUE)
+```
+
+#Teste Não Paramétrico de Mann-Whitney
+
+Teste utilizado quando a distribuição da variância é heterocedástica e precisa dar tratamento aos dodos e permite o observar:
+IGP_medio - valor médio dos ativos 
+std - variabilidade desses valores
+
+RESULTADO:
+A carteira com as três ações (ALZR11, EGIE3 e VLID3) possui mais risco do que o indicador de mercado NQDXBR porque tem menos ativos.
+Pela diferença da média das ações comparada ao valor médio do indicador, observa-se que o retorno da carteira com as três ações é menor que o retorno da carteira de mercado. 
+
+Diante disso, a carteira de ações tem potencial para ser melhorada porque ela tem risco maior que o indicador de mercado e rendimento inferior.
+
+```{r}
+dados_melt <- dados_melt %>% 
+  mutate(ativo = as.character(ativo))
+
+resumo <- dados_melt %>% 
+  group_by(ativo) %>% 
+  summarise(
+    N = n(),
+    iqp_medio = mean(value, na.rm = TRUE),
+    std = sd(value, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>% 
+  arrange(desc(iqp_medio)) %>% 
+  as.data.frame()
+print(resumo)
+```
+
+#Teste não paramétrico Wilcox 
+
+Quando a heterocedasticidade é dectada, não é possível aplicar a ANOVA clássica, pq não há uma variância comum, por causa de outliers.
+
+O testes Wilcox  utiliza a estatística W para encontrar o p-valor associado.
+
+A partir dos p-value é possível rejeitar que a média de todos os 6 pares formados são iguais porque o erro é de 0% de rejeitar a hipótese nula para todas essas opções.
+
+Então há discrepância entre todas as 6 combinações de pares. Para confirmar isso, basta comparar a diferença da média entre elas no resultado acima.
+
+Isso confirma o teste inicial, quando  foi rejeitada a hipótese nula da homocedasticidade.
+```{r}
+# Gerando pares de operadoras para teste
+ativos <- unique(dados_melt$ativo)
+ativos <- combn(
+  x = ativos, m = 2, simplify = FALSE
+)
+names(ativos) <- sapply(
+  ativos, function(x){paste(x, collapse = '-')}
+)
+
+# Testando pares de operadoras
+testes_wilcox <- lapply(
+  X = ativos, FUN = wilcox_teste, f. = value ~ ativo,
+  groups = 'ativo', data = dados_melt
+)
+
+resumo_wilcox <- data.frame(
+  comparacao = names(testes_wilcox),
+  statistic_W = sapply(testes_wilcox, `[[`, i = 'statistic'),
+  p_valor = sapply(testes_wilcox, `[[`, i = 'p.value'),
+  row.names = NULL
+)
+
+print(list(resumo_wilcox))
+```
+No gráfico abaixo é possível perceber a diferença entre a média dos ativos, e a partir disso fazer inferência sobre a comparação desses valores. 
+```{r}
+# Média do índice por ativo
+medias_ativ <- dados_melt %>% 
+  group_by(ativo) %>% 
+  summarise(indice_medio = mean(value), .groups = 'drop')
+medias_nulo <- medias_ativ %>% 
+  mutate(indice_medio = 0)
+medias <- rbind(medias_ativ, medias_nulo)
+
+p1 <- medias_ativ %>% 
+  ggplot(aes(x = ativo, y = indice_medio)) +
+  geom_point(color = '#808000', size = 2.5) +
+  geom_line(data = medias, aes(x = ativo, y = indice_medio), color = '#808000') +
+  theme_light() +
+  labs(
+    x = 'Ativo', y = 'Valor',
+    title = 'Valor médio por ativo'
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5)
+  )
+
+print(p1)
+```
